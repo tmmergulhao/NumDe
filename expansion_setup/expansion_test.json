@@ -1,0 +1,6 @@
+{"expansion_setup":{ 
+    "x":[1, 0.1],
+    "y":[-1, 0.1],
+    "N_taylor":4,
+    "N_grid":2}
+}
