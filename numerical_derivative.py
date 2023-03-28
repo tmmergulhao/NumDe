@@ -14,10 +14,10 @@ MAIN_DIR = os.getcwd()
 
 #Loading the directories 
 '''
-findiff - ver 1.0
+NumDe - ver 1.0
  This code takes the numerical derivative of any function using the finite difference method.
 
-by: Thiago Mergulhao - University of Sao Paulo
+by: Thiago Mergulhao - University of Sao Paulo, University of Edinburgh
 '''
 
 ####################################################################################################
