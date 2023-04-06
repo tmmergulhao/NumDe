@@ -342,5 +342,3 @@ class FiniteDerivative:
 						derivative_output += self.GRID[x] * coefficients / this_normalization
 
 					self.derivatives[this_label][stencil_label] = derivative_output
-
-		return self.derivatives
