@@ -9,6 +9,8 @@ from scipy.special import binom
 from time import perf_counter
 import matplotlib.pyplot as plt
 import h5py as h5
+from multiprocessing import Pool
+from typing import List, Dict, Any
 
 MAIN_DIR = os.getcwd()
 
@@ -39,89 +41,6 @@ def multinomial(params):
 		return 1
 	return binom(sum(params), params[-1]) * multinomial(params[:-1])
 
-def try_mkdir(name):
-	"""Simple function that tries to create a directory in case there is no other with the same 
-	name as given in the input.
-
-	Args:
-		name (str): String with the name of the directory to be created
-	"""
-	this_dir=os.getcwd()+'/'
-	this_dir_to_make = this_dir+name
-	#print(this_dir_to_make)
-	try:
-		os.mkdir(this_dir_to_make)
-	except:
-		pass
-
-def remove_files_in_dir(name):
-	"""Delete all files inside a directory
-
-	Args:
-		name (str): A string with the name of the directory whose files inside will be deleted.
-	"""
-	this_dir = os.getcwd()+'/'
-	dir_to_remove = this_dir+name
-	try:
-		for x in os.listdir(dir_to_remove):
-			os.remove(dir_to_remove+x)
-	except:
-		pass
-
-
-def load_setup(file_name):
-	"""Function that load the .json with the specifications needed to perform the Taylor Expansion.
-
-	Args:
-		file_name (string): Name of the file containing the specifications for the expansion.
-
-	Returns:
-		N_taylor (int), N_grid (int), hash_table (dictionary): Returns the order of the Taylor 
-		expansion, The size of the grid that will be used and a hash_table with the step size in the
-		expansion and where the expansion is being performed around (point in parameter space). 
-	"""
-	setup_dir = MAIN_DIR+'/expansion_setup/'
-	try:
-		with open(setup_dir+file_name+'.json') as json_file:
-			hash_table = json.load(json_file,object_pairs_hook=OrderedDict)["expansion_setup"]
-		try:
-			N_taylor = hash_table.get('N_taylor')
-			N_grid = hash_table.get('N_grid')
-			hash_table.pop('N_taylor')
-			hash_table.pop('N_grid')
-		except:
-			print('Your expansion setup input must have the keys: N_taylor and N_grid')
-			print('Check if the keys are defined properly.')
-			sys.exit(-1)
-	except:
-		pass
-
-	output_dir = os.getcwd()+'/outputs/'+file_name 
-	try_mkdir(output_dir)
-	
-	return N_taylor, N_grid, hash_table
-
-def load_from_grid(setupname,filename):
-	"""Load the function computed in a specific point in the parameter grid space.
-
-	Args:
-		setupname (str): Setup name used to compute the operators
-		filename (list): A list cointaining where in the parameter grid the operators were computed.
-
-	Returns:
-		np.array: A numpy array with the function computed in the grid.
-	"""
-	grid_dir = MAIN_DIR+'/outputs/'+setupname+'/grid/'
-	file_dir = grid_dir+filename
-	try:
-		the_operators = np.load(file_dir+'.npy')
-		return the_operators
-	except:
-		print('Problem reading the operators evaluated at', filename)
-		print('Make sure you have this grid point. The files are supposed to be at:')
-		print(file_dir)
-		sys.exit(-1)
-
 def generate_derivative_label(derivative, params):
 	"""Generate a label in the form of string to name the outputs.
 
@@ -147,9 +66,9 @@ def generate_derivative_label(derivative, params):
 	return the_label
 
 class FiniteDerivative:
-	def __init__(self,**kwargs):
+	def __init__(self, setup = None):
 		try:
-			self.N_taylor, self.N_grid, self.expansion_table = load_setup(kwargs.get("expansion_setup", None))
+			self.N_taylor, self.N_grid, self.expansion_table = setup
 			self.params, self.Nparams= list(self.expansion_table.keys()), len(self.expansion_table.keys())
 			print("Setup loaded from file!")
 		except:
@@ -158,6 +77,8 @@ class FiniteDerivative:
 	def define_setup(self, N_taylor, N_grid, expansion_table):
 		self.N_taylor, self.N_grid, self.expansion_table = N_taylor, N_grid, expansion_table
 		self.params, self.Nparams = list(self.expansion_table.keys()), len(self.expansion_table.keys())
+		self.parallel = False
+		self.processes = 8
 
 	def create_parameter_grid(self, param):
 		"""Create a grid for a specific parameter.
@@ -186,24 +107,30 @@ class FiniteDerivative:
 		return this_grid
 
 	def generate_all_cases(self):
-		"""Generate a list of all possibles partial derivatives up to some order in the Taylor expansion
-		and for any number of parameters
+		"""Generate a list of all possible partial derivatives up to a specified order in the Taylor expansion for any number
+		of parameters.
 
 		Args:
-			N (int): The order of the Taylor expansion
-			setup (str): The name of the .json file with the specifications for the Taylor expansion.
+			None
 
 		Returns:
-			list: A list with all combinations of derivatives.
+			list: A nested list containing all combinations of partial derivatives.
 			
 			Example:
+			
+			For 3 parameters and N = 2:
+			
+			output: [[[0], [1], [2]],
+					[[0, 0], [0, 1], [0, 2], [1, 1], [1, 2], [2, 2]], 
+					[[0, 0, 0], [0, 0, 1], [0, 0, 2], [0, 1, 1], [0, 1, 2], [0, 2, 2], 
+					[1, 1, 1], [1, 1, 2], [1, 2, 2], [2, 2, 2]]]
 
-				For 3 parameters and N = 2:
-
-				output: [[[0], [1], [2]],
-						[[0, 0], [0, 1], [0, 2], [1, 1], [1, 2], [2, 2]], 
-						[[0, 0, 0], [0, 0, 1], [0, 0, 2], [0, 1, 1], [0, 1, 2], [0, 2, 2], 
-						[1, 1, 1], [1, 1, 2], [1, 2, 2], [2, 2, 2]]]
+		This function generates all possible partial derivatives up to the specified order of the Taylor expansion. The function
+		returns a nested list containing all combinations of partial derivatives. The order of the Taylor expansion is set by
+		the variable N_taylor, which is an attribute of the object. The number of parameters is determined by the size of the
+		expansion_table dictionary, which is also an attribute of the object. Each element of the nested list represents a partial
+		derivative, and each sublist contains the indices of the parameters that are involved in that derivative. For example, 
+		the sublist [0, 1] represents the partial derivative with respect to the first and second parameters.
 		"""
 
 		output = []
@@ -213,132 +140,207 @@ class FiniteDerivative:
 				itertools.combinations_with_replacement(params_list,i)])
 		return output
 
-	def get_normalization(self, derivative):
-		"""Compute the normalisation faction for a given derivative
+	def get_normalization(self, derivative: List[int]) -> float:
+		"""Compute the normalization factor for a given derivative.
 
 		Args:
-			derivative (list): The derivative in list format
-			setup (str): The name of the .json file with the specifications for the Taylor expansion.
+			derivative (List[int]): The derivative in list format.
 
 		Returns:
-			float: The normalization of the derivative.
+			float: The normalization factor of the derivative.
 		"""
-		step_size = []
-		for i in range(0,self.Nparams):
-			step_size.append(self.expansion_table[self.params[i]][0]*self.expansion_table[self.params[i]][1])
-		normalization = []
-		if len(derivative)>1:
-			for i in derivative:
-				normalization.append(step_size[i])
-			return np.prod(normalization)
-		else:
-			return step_size[int(derivative[0])]
+		step_sizes = [self.expansion_table[self.params[i]][0] * self.expansion_table[self.params[i]][1]
+					for i in range(self.Nparams)]
+		normalization = np.prod([step_sizes[i] for i in derivative])
+		return normalization
 
-	def evaluate_in_grid(self, function, **kwargs):
-		"""Evaluate the function in the grid.
+	def save_grid_to_file(self, filename):
+		"""
+		Save the grid data to a file in .npz format.
 
 		Args:
-			setup (str): The name of the .json file with the specifications for the Taylor expansion.
+			filename (str): The name of the file to save the grid data to.
+
+		Raises:
+			ValueError: If no grid has been computed yet.
+
+		Returns:
+			None
+		"""
+		if not self.GRID:
+			raise ValueError("No grid has been computed yet.")
+
+		# Create a dictionary with the data to be saved
+		data = {"params": self.params,
+				"GRID": self.GRID}
+
+		# Save the data to the file
+		with open(filename, "wb") as f:
+			np.savez(f, **data)
+
+	def load_grid_from_file(self, filename):
+		"""Load the grid of evaluation results from a file.
+
+		Args:
+			filename (str): The name of the file to load.
+
+		Returns:
+			dict: A dictionary containing the evaluation results for each grid point.
+		"""
+		try:
+			with np.load(filename, allow_pickle = True) as f:
+				if 'GRID' not in f:
+					raise ValueError("File does not contain a valid GRID")
+				self.GRID = f["GRID"]
+				self.params = f["params"]
+				
+		except (IOError, ValueError, KeyError) as e:
+			print(f"An error occurred while loading the file {filename}: {e}")
+			return None
+
+	def evaluate_in_grid(self, function, save_file = None, **kwargs):
+		"""Evaluate the given function on a grid of parameter values using caching and multiproces-
+		ing to speed up the evaluation process.
+
+		Args:
+			function (callable): The function to evaluate. It must take an array of parameter values
+			as its first argument.
+			
+			**kwargs: Additional keyword arguments to pass to the function.
+
+		Attributes:
+			self.Nparams (int): The number of parameters that the function takes as input.
+			self.params (list): A list of tuples, where each tuple contains the name and domain of a parameter.
+			self.N_grid (int): The number of grid points in each dimension.
+			self.parallel (bool): A boolean flag indicating whether to use multiprocessing to speed up the evaluation process.
+			self.processes (int): The number of processes to use if self.parallel is True.
+			self.GRID (dict): A dictionary containing the evaluation results for each grid point.
+
+		Returns:
+			None
 		"""
 		self.GRID = {}
 
-		#Get the total size of the grid
-		total_grid_size = int(2*self.N_grid+1)
+		# Get the total size of the grid
+		total_grid_size = int(2*self.N_grid + 1)
 
-		#Iterator for all grid points
+		# Iterator for all grid points
 		index_grid = [list(tup) for tup in itertools.product(range(-int((total_grid_size-1)/2),\
-			int((total_grid_size-1)/2) + 1),repeat = self.Nparams)]
-		
-		#Get the parameter values in the grid
-		params_grid = np.zeros((self.Nparams,total_grid_size))
-		for index,this_param in enumerate(self.params):
+			int((total_grid_size-1)/2) + 1), repeat=self.Nparams)]
+
+		# Get the parameter values in the grid
+		params_grid = np.zeros((self.Nparams, total_grid_size))
+		for index, this_param in enumerate(self.params):
 			this_param_grid = self.create_parameter_grid(this_param)
-			params_grid[index,:] = this_param_grid
+			params_grid[index, :] = this_param_grid
 
-		#Iterate over all positions in the grid
-		for x in tqdm(index_grid):
-			#Apply a translation to the grid point in order to be consistent with the parameter vectors
+		# Vectorize the function evaluation
+		func_arguments = np.zeros((len(index_grid), self.Nparams))
+		for i, x in enumerate(index_grid):
 			x_translated = [previous + self.N_grid for previous in x]
+			for j, y in enumerate(x_translated):
+				func_arguments[i, j] = float(params_grid[j, y])
 
-			func_argument = []
-			for index,y in enumerate(x_translated):
-				func_argument.append(float(params_grid[index,y]))
+		# Use caching to avoid re-evaluating the same parameter values
+		cache = {}
+		results = []
+		new_results = []
+		if self.parallel:
+			# Use multiprocessing to speed up the evaluation of the function
+			with Pool(self.processes) as p:
+				chunk_args = np.zeros((len(index_grid), self.Nparams))
+				for i, x in enumerate(index_grid):
+					x_translated = [previous + self.N_grid for previous in x]
+					for j, y in enumerate(x_translated):
+						chunk_args[i, j] = float(params_grid[j, y])
+				if len(kwargs) > 0:
+					results = p.starmap(function, zip(chunk_args, itertools.repeat(kwargs)), chunksize=max(1, len(index_grid) // self.processes))
+				else:
+					results = p.map(function, chunk_args, chunksize=max(1, len(index_grid) // self.processes))
+			    
+		else:
+			# Compute the function in the grid without multiprocessing
+			for i, arg in enumerate(func_arguments):
+				arg_str = str(arg)
+				if arg_str in cache:
+					new_results.append(cache[arg_str])
+				else:
+					if len(kwargs) > 0:
+						result = function(arg, kwargs)
+					else:
+						result = function(arg)
+					new_results.append(result)
+					cache[arg_str] = result
+				results.append(result)
 
-			if len(list(kwargs.keys())) != 0:
-				self.GRID[str(x)] = function(func_argument, kwargs)
-			else:
-				self.GRID[str(x)] = function(func_argument)
+		# Store the results in a dictionary
+		for i, x in enumerate(index_grid):
+			self.GRID[str(x)] = results[i] if self.parallel or str(func_arguments[i]) not in cache else cache[str(func_arguments[i])]
+	
+		if save_file is not None:
+			self.save_grid_to_file(save_file)
 
-	def generate_derivative_label(self, derivative):
-		"""Generate a label in the form of string to name the outputs.
+	def generate_derivative_label(self, derivative: List[int]) -> str:
+		"""Generates a label to name the derivative outputs.
 
 		Args:
-			derivative (list): A list with the derivatives.
-
-			setup (string): File name of the specs file
+			derivative (list): A list of integers indicating the derivatives to be taken.
 
 		Returns:
-			string: A string that is used as a label to tag the derivative outputs.
-		
-		Example: 
-		For a given setup with param0 and param1:
-			* [0,0] gives the label for the second derivative of parameter 0: dparam0dparam0
-			* [0,1] gives dparam0dparam1, etc...
+			str: A string that is used as a label to tag the derivative outputs.
+			The label format follows the convention of naming each derivative 
+			as 'd[n]param[i]' where [n] is the number of times the derivative is taken,
+			and [i] is the index of the parameter with respect to which the derivative is taken.
+			For example, [0, 0] gives the label for the second derivative of parameter 0: 'd2param0'.
 		"""
-
 		counts = Counter(derivative)
-		the_label = ''
-		for x in counts.keys():
-			the_label += 'd'+str(counts[x])+str(self.params[x])
+		label = ''.join(['d' + str(counts[x]) + str(self.params[x]) for x in counts.keys()])
+		return label
 		
-		return the_label	
-	
-	def take_derivative_ALL(self, verbose = False):
-		"""Compute all derivatives according to the setup file
+	def take_derivative_ALL(self, verbose: bool = False) -> Dict[str, Dict[str, Any]]:
+		"""
+		Compute all derivatives according to the setup file.
 
 		Args:
-			setup (str): The name of the .json file with the specifications for the Taylor expansion.
+			verbose: A boolean flag indicating whether to print verbose output.
+
+		Returns:
+			A dictionary containing the computed derivatives.
 		"""
 
-		#Read the setup dictionary
-		stencil_list = []
-		
-		for i in range(1,self.N_grid+1):
-			stencil_list.append(np.arange(-i,i+1,1))
-
+		stencil_list = [np.arange(-i, i+1, 1) for i in range(1, self.N_grid+1)]
+		all_cases = self.generate_all_cases()
 		self.derivatives = {}
-		#Iterate over all derivatives
-		for this_case in self.generate_all_cases():
+
+		for this_case in all_cases:
 			for this_derivative in this_case:
 				this_label = self.generate_derivative_label(this_derivative)
-				self.derivatives[this_label]= {}
-				to_print = 'This case:'+this_label
-				if verbose: print(to_print.center(80, '*'))
+				self.derivatives[this_label] = {}
+				if verbose:
+					print(f"This case: {this_label}".center(80, "*"))
 
-				#For a given derivative we can compute the normalization
 				this_normalization = self.get_normalization(this_derivative)
 
 				for this_stencil_shape in stencil_list:
-					stencil_halfsize = int(len(this_stencil_shape)-1)
-					if stencil_halfsize < 10:
-						stencil_label = '0'+str(stencil_halfsize)
-					else:
-						stencil_label = str(stencil_halfsize)
-					if verbose: print('This stencil has size', len(this_stencil_shape))
+					stencil_halfsize = len(this_stencil_shape) - 1
+					stencil_label = f"0{stencil_halfsize}" if stencil_halfsize < 10 else str(stencil_halfsize)
+					if verbose:
+						print(f"This stencil has size {len(this_stencil_shape)}")
 					self.derivatives[this_label][stencil_label] = {}
 					stencil = finite_difference_coefficients(this_stencil_shape)
+
 					try:
-						GRID_coefficients = stencil.get_derivative_coef(this_derivative,self.Nparams)
-					except:
-						#Ignore the case in which the derivative is impossible to be taken.
+						GRID_coefficients = stencil.get_derivative_coef(this_derivative, self.Nparams)
+					except ValueError:
+						# Ignore the case in which the derivative is impossible to be taken.
 						continue
 
-					#Open some random file and copy its shape
 					derivative_output = np.zeros_like(self.GRID[list(self.GRID.keys())[0]])
-					
-					#Compute the derivative using the finite difference method term by term
-					for x,coefficients in GRID_coefficients:
-						if verbose: print(x,coefficients)
-						derivative_output += self.GRID[x]*coefficients/this_normalization
+					for x, coefficients in GRID_coefficients:
+						if verbose:
+							print(x, coefficients)
+						derivative_output += self.GRID[x] * coefficients / this_normalization
 
-					self.derivatives[this_label][stencil_label]=derivative_output
+					self.derivatives[this_label][stencil_label] = derivative_output
+
+		return self.derivatives
