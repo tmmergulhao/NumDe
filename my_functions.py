@@ -101,3 +101,11 @@ def ComputePk(theta):
 
     # Return the linear matter power spectrum as a function of k-vector
     return operators[14]
+
+
+
+x_array = np.arange(-10,10,0.01)
+def f_UnitTest_2(theta,kwargs):
+    a,b = theta
+    x_array = kwargs["x_array"]
+    return np.sin(x_array*b)*np.cos(x_array*a)

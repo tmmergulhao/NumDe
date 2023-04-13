@@ -68,14 +68,14 @@ def generate_derivative_label(derivative, params):
 class FiniteDerivative:
 	def __init__(self, setup = None):
 		try:
-			self.N_taylor, self.N_grid, self.expansion_table = setup
+			self.N_derivative, self.N_grid, self.expansion_table = setup
 			self.params, self.Nparams= list(self.expansion_table.keys()), len(self.expansion_table.keys())
 			print("Setup loaded from file!")
 		except:
 			pass
 
-	def define_setup(self, N_taylor, N_grid, expansion_table):
-		self.N_taylor, self.N_grid, self.expansion_table = N_taylor, N_grid, expansion_table
+	def define_setup(self, N_derivative, N_grid, expansion_table):
+		self.N_derivative, self.N_grid, self.expansion_table = N_derivative, N_grid, expansion_table
 		self.params, self.Nparams = list(self.expansion_table.keys()), len(self.expansion_table.keys())
 		self.parallel = False
 		self.processes = 8
@@ -84,8 +84,7 @@ class FiniteDerivative:
 		"""Create a grid for a specific parameter.
 
 		Args:
-			param (list): A list with the reference value and the step size as a percentage of the 
-			it.
+			param (list): A list with the reference value and the step size
 			N_stencil (int): The size of the stencil.
 
 		Returns:
@@ -97,8 +96,7 @@ class FiniteDerivative:
 			output: [0.9, 1, 1.1]
 		"""
 		N_stencil = 2*self.N_grid + 1
-		reference_value, percentage_step_size = self.expansion_table[param]
-		step_size = reference_value*percentage_step_size
+		reference_value, step_size = self.expansion_table[param]
 		this_grid = np.zeros(N_stencil)
 		
 		for i in range(0,len(this_grid)):
@@ -106,7 +104,7 @@ class FiniteDerivative:
 			this_grid[i] = reference_value + counter
 		return this_grid
 
-	def generate_all_cases(self):
+	def generate_all_cases(self, N = None):
 		"""Generate a list of all possible partial derivatives up to a specified order in the Taylor expansion for any number
 		of parameters.
 
@@ -127,7 +125,7 @@ class FiniteDerivative:
 
 		This function generates all possible partial derivatives up to the specified order of the Taylor expansion. The function
 		returns a nested list containing all combinations of partial derivatives. The order of the Taylor expansion is set by
-		the variable N_taylor, which is an attribute of the object. The number of parameters is determined by the size of the
+		the variable N_derivative, which is an attribute of the object. The number of parameters is determined by the size of the
 		expansion_table dictionary, which is also an attribute of the object. Each element of the nested list represents a partial
 		derivative, and each sublist contains the indices of the parameters that are involved in that derivative. For example, 
 		the sublist [0, 1] represents the partial derivative with respect to the first and second parameters.
@@ -135,9 +133,15 @@ class FiniteDerivative:
 
 		output = []
 		params_list = range(0,len(self.expansion_table.keys()))
-		for i in range(1,self.N_taylor+1):
-			output.append([list(this_value) for this_value in \
-				itertools.combinations_with_replacement(params_list,i)])
+		if N is not None:
+			for i in range(1,N+1):
+				output.append([list(this_value) for this_value in \
+					itertools.combinations_with_replacement(params_list,i)])
+
+		else:
+			for i in range(1,self.N_derivative+1):
+					output.append([list(this_value) for this_value in \
+						itertools.combinations_with_replacement(params_list,i)])
 		return output
 
 	def get_normalization(self, derivative: List[int]) -> float:
@@ -149,8 +153,7 @@ class FiniteDerivative:
 		Returns:
 			float: The normalization factor of the derivative.
 		"""
-		step_sizes = [self.expansion_table[self.params[i]][0] * self.expansion_table[self.params[i]][1]
-					for i in range(self.Nparams)]
+		step_sizes = [self.expansion_table[self.params[i]][1] for i in range(self.Nparams)]
 		normalization = np.prod([step_sizes[i] for i in derivative])
 		return normalization
 
@@ -172,7 +175,10 @@ class FiniteDerivative:
 
 		# Create a dictionary with the data to be saved
 		data = {"params": self.params,
-				"GRID": self.GRID}
+				"GRID": self.GRID,
+				"N_derivative":self.N_derivative,
+				"N_grid":self.N_grid,
+				"expansion_table":self.expansion_table}
 
 		# Save the data to the file
 		with open(filename, "wb") as f:
@@ -191,9 +197,16 @@ class FiniteDerivative:
 			with np.load(filename, allow_pickle = True) as f:
 				if 'GRID' not in f:
 					raise ValueError("File does not contain a valid GRID")
-				self.GRID = f["GRID"]
+				self.GRID = f["GRID"].item()
 				self.params = f["params"]
-				
+				self.N_derivative = f["N_derivative"].item()
+				self.N_grid = f["N_grid"].item()
+				self.expansion_table = f["expansion_table"].item()
+				self.Nparams = len(self.params)
+				if "derivatives" in f.files:
+					print("Derivatives loaded!")
+					self.derivatives = f["derivatives"].item()
+
 		except (IOError, ValueError, KeyError) as e:
 			print(f"An error occurred while loading the file {filename}: {e}")
 			return None
@@ -219,6 +232,7 @@ class FiniteDerivative:
 		Returns:
 			None
 		"""
+		#Initialize the grid
 		self.GRID = {}
 
 		# Get the total size of the grid
@@ -246,21 +260,22 @@ class FiniteDerivative:
 		results = []
 		new_results = []
 		if self.parallel:
-			# Use multiprocessing to speed up the evaluation of the function
 			with Pool(self.processes) as p:
+				# create the input arguments for the function
 				chunk_args = np.zeros((len(index_grid), self.Nparams))
 				for i, x in enumerate(index_grid):
 					x_translated = [previous + self.N_grid for previous in x]
 					for j, y in enumerate(x_translated):
 						chunk_args[i, j] = float(params_grid[j, y])
 				if len(kwargs) > 0:
-					results = p.starmap(function, zip(chunk_args, itertools.repeat(kwargs)), chunksize=max(1, len(index_grid) // self.processes))
+					results = list(tqdm(p.starmap(function, zip(chunk_args, itertools.repeat(kwargs)),
+											chunksize=max(1, len(index_grid) // self.processes)), total=len(index_grid)))
 				else:
-					results = p.map(function, chunk_args, chunksize=max(1, len(index_grid) // self.processes))
-			    
+					results = list(tqdm(p.map(function, chunk_args,
+										chunksize=max(1, len(index_grid) // self.processes)), total=len(index_grid)))
 		else:
 			# Compute the function in the grid without multiprocessing
-			for i, arg in enumerate(func_arguments):
+			for i, arg in enumerate(tqdm(func_arguments)):
 				arg_str = str(arg)
 				if arg_str in cache:
 					new_results.append(cache[arg_str])
@@ -296,8 +311,26 @@ class FiniteDerivative:
 		counts = Counter(derivative)
 		label = ''.join(['d' + str(counts[x]) + str(self.params[x]) for x in counts.keys()])
 		return label
-		
-	def take_derivative_ALL(self, verbose: bool = False) -> Dict[str, Dict[str, Any]]:
+
+	def PlotDerivatives(self, x_axis = None):
+		for this_derivative in list(self.derivatives.keys()):
+			plt.figure(figsize = (4,4), constrained_layout = True)
+			plt.title(this_derivative)
+			for this_stencil in list(self.derivatives[this_derivative]):
+				try:
+					if x_axis is not None:
+						plt.plot(x_axis, self.derivatives[this_derivative][this_stencil], \
+							label = this_stencil)
+					else:
+						plt.plot(self.derivatives[this_derivative][this_stencil], \
+							label = this_stencil)
+				except:
+					pass
+			plt.legend()
+			plt.show()
+		plt.close('all')
+	
+	def take_derivative_ALL(self, verbose: bool = False, save_file = None) -> Dict[str, Dict[str, Any]]:
 		"""
 		Compute all derivatives according to the setup file.
 
@@ -312,6 +345,13 @@ class FiniteDerivative:
 		all_cases = self.generate_all_cases()
 		self.derivatives = {}
 
+		#A cache for vanishing derivatives. All subsequent derivatives of this case will vanish 
+		#automatically
+		self.vanishing_derivatives = []
+
+		reference_label = str(list(np.zeros(self.Nparams,dtype=int)))
+		reference_point = self.GRID[reference_label]
+		
 		for this_case in all_cases:
 			for this_derivative in this_case:
 				this_label = self.generate_derivative_label(this_derivative)
@@ -341,4 +381,64 @@ class FiniteDerivative:
 							print(x, coefficients)
 						derivative_output += self.GRID[x] * coefficients / this_normalization
 
-					self.derivatives[this_label][stencil_label] = derivative_output
+					derivative_output = np.around(derivative_output,5)
+					if np.all(derivative_output == 0) and this_derivative not in self.vanishing_derivatives:
+						self.vanishing_derivatives.append(this_derivative)
+
+					self.derivatives[this_label][stencil_label] = np.around(derivative_output,5)
+		
+		if save_file is not None:
+			f = np.load(save_file)
+			data = dict(np.load(save_file,allow_pickle = True).items())
+			
+			data.update({"derivatives":self.derivatives})
+			np.savez(save_file, **data)
+			f.close()
+	
+	def TaylorExpand(self, x, N_taylor, stencil = None):
+
+		#Which stencil size use when loading the derivatives. The standard value is the largest 
+		#one, stencil = 2*N_grid.
+		if stencil is None:
+			stencil = str(2*self.N_grid).zfill(2)
+		else:
+			stencil = str(stencil).zfill(2)
+			print(stencil)
+		#Load the function computed at the reference point
+		reference_label = str(list(np.zeros(self.Nparams,dtype=int)))
+		reference_point = self.GRID[reference_label]
+
+		#Accumulate all contributions of the Taylor expansion
+		taylor_corrections = 0
+
+		#Calculate the difference between the input and the reference value
+		diffs = []
+		for i in range(len(x)):
+			diffs.append(x[i] - self.expansion_table[self.params[i]][0])
+	
+		#Iterate over all terms contributing to the Taylor expansion up to some order
+		for index, derivative_list in enumerate(self.generate_all_cases(N_taylor)):
+			derivative_order = index+1
+			denominator_factor = factorial(derivative_order)
+
+			for derivative in derivative_list:
+
+				#Generate the derivative label
+				derivative_label = generate_derivative_label(derivative, self.params)
+
+				#List to storage the polynomial terms and the associated multinomial term				
+				polynomial_part = []
+				multinomial_index = []
+
+				#Count the power for the polynomial part
+				pows = Counter(derivative)
+
+				#Compute the polynomial part
+				for expanded_variable in pows.keys():
+					polynomial_part.append(pow(diffs[expanded_variable],pows[expanded_variable]))
+					multinomial_index.append(pows[expanded_variable])
+
+				taylor_corrections += np.prod(polynomial_part)*multinomial(multinomial_index)\
+					*self.derivatives[derivative_label][stencil]/denominator_factor
+
+		return reference_point + taylor_corrections
