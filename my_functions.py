@@ -103,7 +103,6 @@ def ComputePk(theta):
     return operators[14]
 
 
-
 x_array = np.arange(-10,10,0.01)
 def f_UnitTest_2(theta,kwargs):
     a,b = theta

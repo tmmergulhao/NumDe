@@ -1,0 +1,224 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 13.0' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       158,          7]
+NotebookDataLength[      8802,        214]
+NotebookOptionsPosition[      8120,        195]
+NotebookOutlinePosition[      8519,        211]
+CellTagsIndexPosition[      8476,        208]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{
+   RowBox[{"f", "[", 
+    RowBox[{"x_", ",", "a_"}], "]"}], ":=", 
+   RowBox[{
+    SuperscriptBox["x", "2"], "*", 
+    RowBox[{"Sin", "[", 
+     RowBox[{"a", "*", "x"}], "]"}]}]}], ";"}], "\n", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"fTAYLOR", "[", 
+    RowBox[{"x_", ",", "N_", ",", "a_", ",", "a0_"}], "]"}], ":=", 
+   RowBox[{
+    RowBox[{"Normal", "[", 
+     RowBox[{"Series", "[", 
+      RowBox[{
+       RowBox[{"f", "[", 
+        RowBox[{"x", ",", "b"}], "]"}], ",", 
+       RowBox[{"{", 
+        RowBox[{"b", ",", "a0", ",", "N"}], "}"}]}], "]"}], "]"}], "/.", 
+    RowBox[{"b", "->", "a"}]}]}], ";"}], "\n"}], "Input",
+ CellChangeTimes->{{3.89038573941555*^9, 3.890385739431839*^9}, {
+   3.890385771149465*^9, 3.8903857723090973`*^9}, {3.890385859522018*^9, 
+   3.890385899252981*^9}, {3.8903873819975224`*^9, 3.890387402674943*^9}, 
+   3.890387744988109*^9, {3.890388010798203*^9, 3.8903880134382267`*^9}, {
+   3.8903881492312737`*^9, 3.890388153698532*^9}},
+ CellLabel->"In[64]:=",ExpressionUUID->"d5ad6c20-424d-4f2e-a8ce-469f9637562c"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"Manipulate", "[", 
+   RowBox[{
+    RowBox[{"Plot", "[", 
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{
+        RowBox[{"f", "[", 
+         RowBox[{"x", ",", "a"}], "]"}], ",", 
+        RowBox[{"fTAYLOR", "[", 
+         RowBox[{"x", ",", "N", ",", "a", ",", "a0"}], "]"}]}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"x", ",", 
+        RowBox[{"-", "10"}], ",", "10"}], "}"}], ",", 
+      RowBox[{"PlotStyle", "->", 
+       RowBox[{"{", 
+        RowBox[{"Blue", ",", "Red"}], "}"}]}], ",", 
+      RowBox[{"PlotLegends", "->", 
+       RowBox[{"{", 
+        RowBox[{"\"\<f(x, a)\>\"", ",", "\"\<fTAYLOR(x, a, N, a0)\>\""}], 
+        "}"}]}], ",", 
+      RowBox[{"AxesLabel", "->", 
+       RowBox[{"{", 
+        RowBox[{"\"\<x\>\"", ",", "\"\<y\>\""}], "}"}]}], ",", 
+      RowBox[{"PlotPoints", "->", "100"}], ",", 
+      RowBox[{"MaxRecursion", "->", "5"}], ",", 
+      RowBox[{"PlotRange", "->", 
+       RowBox[{"{", 
+        RowBox[{
+         RowBox[{"{", 
+          RowBox[{
+           RowBox[{"-", "10"}], ",", "10"}], "}"}], ",", 
+         RowBox[{"{", 
+          RowBox[{
+           RowBox[{"-", "0.5"}], ",", "1.4"}], "}"}]}], "}"}]}]}], "]"}], ",", 
+    RowBox[{"{", 
+     RowBox[{"a", ",", 
+      RowBox[{"-", "2"}], ",", "2"}], "}"}], ",", 
+    RowBox[{"{", 
+     RowBox[{"N", ",", "1", ",", "50", ",", "1"}], "}"}], ",", 
+    RowBox[{"{", 
+     RowBox[{"a0", ",", 
+      RowBox[{"-", "5"}], ",", "5"}], "}"}]}], "]"}], "\n", "\n"}]], "Input",
+ CellChangeTimes->{{3.890385901875332*^9, 3.890385928521925*^9}, {
+   3.890385970191956*^9, 3.8903861140837517`*^9}, 3.8903862437019167`*^9, {
+   3.890386280135106*^9, 3.890386319128664*^9}, {3.890386359676476*^9, 
+   3.890386392115782*^9}, {3.890386718461301*^9, 3.890386729806027*^9}, {
+   3.890387470090743*^9, 3.890387482040744*^9}, {3.8903875245585337`*^9, 
+   3.89038752661279*^9}, {3.890387660700315*^9, 3.89038766847095*^9}, {
+   3.890387762513658*^9, 3.8903877710612907`*^9}, {3.890387940880621*^9, 
+   3.890387943553669*^9}},
+ CellLabel->"In[66]:=",ExpressionUUID->"67166d67-94bd-4487-b91d-4b1930d7251f"],
+
+Cell[BoxData[
+ TagBox[
+  StyleBox[
+   DynamicModuleBox[{$CellContext`a$$ = 2, $CellContext`a0$$ = 1, N$$ = 12, 
+    Typeset`show$$ = True, Typeset`bookmarkList$$ = {}, 
+    Typeset`bookmarkMode$$ = "Menu", Typeset`animator$$, Typeset`animvar$$ = 
+    1, Typeset`name$$ = "\"untitled\"", Typeset`specs$$ = {{
+      Hold[$CellContext`a$$], -2, 2}, {
+      Hold[N$$], 1, 50, 1}, {
+      Hold[$CellContext`a0$$], -5, 5}}, Typeset`size$$ = {527., {115., 120.}},
+     Typeset`update$$ = 0, Typeset`initDone$$, Typeset`skipInitDone$$ = True}, 
+    DynamicBox[Manipulate`ManipulateBoxes[
+     1, StandardForm, 
+      "Variables" :> {$CellContext`a$$ = -2, $CellContext`a0$$ = -5, N$$ = 1},
+       "ControllerVariables" :> {}, 
+      "OtherVariables" :> {
+       Typeset`show$$, Typeset`bookmarkList$$, Typeset`bookmarkMode$$, 
+        Typeset`animator$$, Typeset`animvar$$, Typeset`name$$, 
+        Typeset`specs$$, Typeset`size$$, Typeset`update$$, Typeset`initDone$$,
+         Typeset`skipInitDone$$}, "Body" :> Plot[{
+         $CellContext`f[$CellContext`x, $CellContext`a$$], 
+         $CellContext`fTAYLOR[$CellContext`x, 
+          N$$, $CellContext`a$$, $CellContext`a0$$]}, {$CellContext`x, -10, 
+         10}, PlotStyle -> {Blue, Red}, 
+        PlotLegends -> {"f(x, a)", "fTAYLOR(x, a, N, a0)"}, 
+        AxesLabel -> {"x", "y"}, PlotPoints -> 100, MaxRecursion -> 5, 
+        PlotRange -> {{-10, 10}, {-0.5, 1.4}}], 
+      "Specifications" :> {{$CellContext`a$$, -2, 2}, {
+        N$$, 1, 50, 1}, {$CellContext`a0$$, -5, 5}}, "Options" :> {}, 
+      "DefaultOptions" :> {}],
+     ImageSizeCache->{571., {229., 234.}},
+     SingleEvaluation->True],
+    Deinitialization:>None,
+    DynamicModuleValues:>{},
+    SynchronousInitialization->True,
+    UndoTrackedVariables:>{Typeset`show$$, Typeset`bookmarkMode$$},
+    UnsavedVariables:>{Typeset`initDone$$},
+    UntrackedVariables:>{Typeset`size$$}], "Manipulate",
+   Deployed->True,
+   StripOnInput->False],
+  Manipulate`InterpretManipulate[1]]], "Output",
+ CellChangeTimes->{{3.890388016044918*^9, 3.890388027586083*^9}, {
+  3.890388155998938*^9, 3.890388158311882*^9}},
+ CellLabel->"Out[66]=",ExpressionUUID->"585ec926-35bf-49d1-aad0-cb4131481b73"]
+}, Open  ]],
+
+Cell[BoxData[
+ TagBox[
+  StyleBox[
+   DynamicModuleBox[{$CellContext`a$$ = 2, $CellContext`a0$$ = -1, N$$ = 1, 
+    Typeset`show$$ = True, Typeset`bookmarkList$$ = {}, 
+    Typeset`bookmarkMode$$ = "Menu", Typeset`animator$$, Typeset`animvar$$ = 
+    1, Typeset`name$$ = "\"untitled\"", Typeset`specs$$ = {{
+      Hold[$CellContext`a$$], -2, 2}, {
+      Hold[N$$], 1, 50, 1}, {
+      Hold[$CellContext`a0$$], -5, 5}}, Typeset`size$$ = {527., {115., 120.}},
+     Typeset`update$$ = 0, Typeset`initDone$$, Typeset`skipInitDone$$ = True}, 
+    DynamicBox[Manipulate`ManipulateBoxes[
+     1, StandardForm, 
+      "Variables" :> {$CellContext`a$$ = -2, $CellContext`a0$$ = -5, N$$ = 1},
+       "ControllerVariables" :> {}, 
+      "OtherVariables" :> {
+       Typeset`show$$, Typeset`bookmarkList$$, Typeset`bookmarkMode$$, 
+        Typeset`animator$$, Typeset`animvar$$, Typeset`name$$, 
+        Typeset`specs$$, Typeset`size$$, Typeset`update$$, Typeset`initDone$$,
+         Typeset`skipInitDone$$}, "Body" :> Plot[{
+         $CellContext`f[$CellContext`x, $CellContext`a$$], 
+         $CellContext`fTAYLOR[$CellContext`x, 
+          N$$, $CellContext`a$$, $CellContext`a0$$]}, {$CellContext`x, -10, 
+         10}, PlotStyle -> {Blue, Red}, 
+        PlotLegends -> {"f(x, a)", "fTAYLOR(x, a, N, a0)"}, 
+        AxesLabel -> {"x", "y"}, PlotPoints -> 100, MaxRecursion -> 5, 
+        PlotRange -> {{-10, 10}, {-0.5, 1.4}}], 
+      "Specifications" :> {{$CellContext`a$$, -2, 2}, {
+        N$$, 1, 50, 1}, {$CellContext`a0$$, -5, 5}}, "Options" :> {}, 
+      "DefaultOptions" :> {}],
+     ImageSizeCache->{571., {229., 234.}},
+     SingleEvaluation->True],
+    Deinitialization:>None,
+    DynamicModuleValues:>{},
+    SynchronousInitialization->True,
+    UndoTrackedVariables:>{Typeset`show$$, Typeset`bookmarkMode$$},
+    UnsavedVariables:>{Typeset`initDone$$},
+    UntrackedVariables:>{Typeset`size$$}], "Manipulate",
+   Deployed->True,
+   StripOnInput->False],
+  Manipulate`InterpretManipulate[1]]], "Input",
+ CellChangeTimes->{3.8903879844610777`*^9},
+ CellLabel->"In[60]:=",ExpressionUUID->"a3abbaf5-315d-40f8-9369-f56e5adee4f0"]
+},
+WindowSize->{1102, 714},
+WindowMargins->{{Automatic, -1102}, {0, Automatic}},
+FrontEndVersion->"13.0 for Mac OS X ARM (64-bit) (December 2, 2021)",
+StyleDefinitions->"Default.nb",
+ExpressionUUID->"828dd879-54b4-4f9f-8301-8f3dbb833fdb"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[558, 20, 1076, 27, 73, "Input",ExpressionUUID->"d5ad6c20-424d-4f2e-a8ce-469f9637562c"],
+Cell[CellGroupData[{
+Cell[1659, 51, 2111, 52, 115, "Input",ExpressionUUID->"67166d67-94bd-4487-b91d-4b1930d7251f"],
+Cell[3773, 105, 2200, 43, 482, "Output",ExpressionUUID->"585ec926-35bf-49d1-aad0-cb4131481b73"]
+}, Open  ]],
+Cell[5988, 151, 2128, 42, 478, InheritFromParent,ExpressionUUID->"a3abbaf5-315d-40f8-9369-f56e5adee4f0"]
+}
+]
+*)
+
+(* End of internal cache information *)
+
